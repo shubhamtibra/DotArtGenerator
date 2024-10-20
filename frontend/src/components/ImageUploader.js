@@ -136,8 +136,7 @@ function ImageUploader() {
     axios
       .post("http://localhost:8000/api/upload/", formData)
       .then((response) => {
-        setDotArtVariants(response.data.variants);
-        setSelectedVariantIndex(0);
+        setDotArt(response.data.dot_art);
       })
       .catch((error) => {
         console.error("Error generating dot art:", error);
@@ -182,23 +181,7 @@ function ImageUploader() {
           aspectRatio={aspectRatio}
         />
       )}
-      {dotArtVariants.length > 0 && (
-        <div>
-          <label className="block mb-2">Select Gamma Variant:</label>
-          <select
-            value={selectedVariantIndex}
-            onChange={(e) => setSelectedVariantIndex(e.target.value)}
-            className="block w-full bg-base02 border border-base01 p-2 rounded text-base0 focus:outline-none focus:ring-2 focus:ring-blue"
-          >
-            {dotArtVariants.map((variant, index) => (
-              <option key={index} value={index}>
-                Gamma {variant.gamma}
-              </option>
-            ))}
-          </select>
-          <DotArtViewer dotArt={dotArtVariants[selectedVariantIndex].dot_art} />
-        </div>
-      )}
+      {dotArt && <DotArtViewer dotArt={dotArt} />}
     </div>
   );
 }
