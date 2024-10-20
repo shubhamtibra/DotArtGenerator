@@ -1,28 +1,72 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import ImageResizer from "./ImageResizer.js";
+import ImageResizer from "./ImageResizerByWidth.js";
 import DotArtViewer from "./DotArtViewer.js";
 
 function ImageUploader() {
+  const [isUsingUpload, setIsUsingUpload] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState("");
   const [imageSrc, setImageSrc] = useState(null);
   const [dotArt, setDotArt] = useState("");
-  const [width, setWidth] = useState(100);
-  const [aspectRatio, setAspectRatio] = useState(null);
   const [debounceTimeout, setDebounceTimeout] = useState(null);
+  const [resizedImageDimensions, setResizedImageDimensions] = useState(null);
+  const [transformScale, setTransformScale] = useState(null);
+  const [aspectRatio, setAspectRatio] = useState(null);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imageObject = useRef(new Image());
+  const originalImageSize = useRef(null);
+  const [dotArtVariants, setDotArtVariants] = useState([]);
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+
+  useEffect(() => {
+    imageObject.current.onload = () => {
+      //   setAspectRatio(imageObject.current.naturalHeight / imageObject.current.naturalWidth);
+      originalImageSize.current = {
+        width: imageObject.current.naturalWidth,
+        height: imageObject.current.naturalHeight,
+      };
+      setResizedImageDimensions({
+        width: imageObject.current.naturalWidth,
+        height: imageObject.current.naturalHeight,
+      });
+      const biggerDimension = Math.max(
+        imageObject.current.naturalWidth,
+        imageObject.current.naturalHeight
+      );
+      let initialScale;
+      if (biggerDimension < 250) {
+        initialScale = 2;
+      } else if (biggerDimension < 500) {
+        initialScale = biggerDimension / 500;
+      } else if (biggerDimension < 2000) {
+        initialScale = 500 / biggerDimension;
+      } else {
+        initialScale = 700 / biggerDimension;
+      }
+      setTransformScale([initialScale, initialScale]);
+      imageObject.current.onerror = (err) => {
+        console.log(err.stack);
+      };
+      setImageLoaded(true);
+    };
+  }, []);
+  useEffect(() => {
+    setDotArt("");
+    setAspectRatio(null);
+    if (isUsingUpload === false) {
+      setImageFile(null);
+    }
+  }, [isUsingUpload]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    setImageFile(file);
-    setImageUrl("");
-    setDotArt("");
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImageSrc(event.target.result);
-      };
-      reader.readAsDataURL(file);
+      const localImageUrl = URL.createObjectURL(file);
+      imageObject.current.src = localImageUrl;
+      setImageSrc(localImageUrl);
+      setIsUsingUpload(true);
+      setImageFile(file);
     } else {
       setImageSrc(null);
     }
@@ -30,11 +74,11 @@ function ImageUploader() {
 
   const handleUrlChange = (e) => {
     const url = e.target.value;
-    setImageUrl(url);
-    setImageFile(null);
-    setDotArt("");
     if (url) {
+      setIsUsingUpload(false);
       setImageSrc(url);
+      setImageUrlInput(url);
+      imageObject.current.src = url;
     } else {
       setImageSrc(null);
     }
@@ -55,26 +99,45 @@ function ImageUploader() {
       debounceGenerateDotArt();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [width, aspectRatio]);
+  }, [resizedImageDimensions, aspectRatio]);
+
+  const handleResize = ({ width, height }) => {
+    if (aspectRatio && width) {
+      setResizedImageDimensions({
+        width: width,
+        height: width * aspectRatio,
+      });
+    } else if (width) {
+      setResizedImageDimensions({
+        width: width,
+        height:
+          (width * imageObject.current.naturalHeight) /
+          imageObject.current.naturalWidth,
+      });
+    }
+  };
+  const handleSliderWidthChange = (value) => {
+    handleResize({ width: (imageObject.current.naturalWidth * value) / 100 });
+  };
+  const handleAspectRatioChange = (value) => {
+    setAspectRatio(value);
+  };
 
   const generateDotArt = () => {
     const formData = new FormData();
-    if (imageFile) {
+    if (isUsingUpload) {
       formData.append("file", imageFile);
-    } else if (imageUrl) {
-      formData.append("url", imageUrl);
+    } else if (imageSrc) {
+      formData.append("url", imageSrc);
     } else {
       return;
     }
-    formData.append("width", width);
-    if (aspectRatio) {
-      formData.append("aspect_ratio", aspectRatio);
-    }
-
+    formData.append("width", resizedImageDimensions.width);
     axios
       .post("http://localhost:8000/api/upload/", formData)
       .then((response) => {
-        setDotArt(response.data.dot_art);
+        setDotArtVariants(response.data.variants);
+        setSelectedVariantIndex(0);
       })
       .catch((error) => {
         console.error("Error generating dot art:", error);
@@ -100,7 +163,7 @@ function ImageUploader() {
           </label>
           <input
             type="text"
-            value={imageUrl}
+            value={imageUrlInput}
             onChange={handleUrlChange}
             className="block w-full bg-base02 border border-base01 p-2 rounded text-base0 placeholder-base1 focus:outline-none focus:ring-2 focus:ring-blue hover:bg-base01 transition"
             placeholder="Enter image URL"
@@ -108,18 +171,34 @@ function ImageUploader() {
         </div>
       </div>
 
-      {imageSrc && (
+      {imageLoaded && (
         <ImageResizer
           imageSrc={imageSrc}
-          width={width}
-          aspectRatio={aspectRatio}
-          onWidthChange={(e) => setWidth(e.target.value)}
-          onAspectRatioChange={(e) => setAspectRatio(e.target.value)}
+          resizedImageDimensions={resizedImageDimensions}
+          onWidthChange={handleSliderWidthChange}
+          onAspectRatioChange={handleAspectRatioChange}
           onImageChange={debounceGenerateDotArt}
+          transformScale={transformScale}
+          aspectRatio={aspectRatio}
         />
       )}
-
-      {dotArt && <DotArtViewer dotArt={dotArt} />}
+      {dotArtVariants.length > 0 && (
+        <div>
+          <label className="block mb-2">Select Gamma Variant:</label>
+          <select
+            value={selectedVariantIndex}
+            onChange={(e) => setSelectedVariantIndex(e.target.value)}
+            className="block w-full bg-base02 border border-base01 p-2 rounded text-base0 focus:outline-none focus:ring-2 focus:ring-blue"
+          >
+            {dotArtVariants.map((variant, index) => (
+              <option key={index} value={index}>
+                Gamma {variant.gamma}
+              </option>
+            ))}
+          </select>
+          <DotArtViewer dotArt={dotArtVariants[selectedVariantIndex].dot_art} />
+        </div>
+      )}
     </div>
   );
 }
