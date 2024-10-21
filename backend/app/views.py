@@ -455,6 +455,8 @@ class ImageUploadView(APIView):
         edges = edges_tuple[0]  # Edge map
         edges_np = edges.squeeze().cpu().numpy()
         edges_np = 1 - edges_np  # Convert to numpy array
+        edges_np_norm = (edges_np - (np.min(edges_np))) / \
+            ((np.max(edges_np) - np.min(edges_np)))
 
         # Compute edge density map by blurring the edge map
         edges_blurred = cv2.GaussianBlur(edges_np, (5, 5), 0)
@@ -481,8 +483,24 @@ class ImageUploadView(APIView):
 
         darkened_edge_high_contrast = copy.deepcopy(high_contrast_norm)
         # combined_image = edges_blurred_norm * 0.3 + high_contrast_norm * 0.7
-        darkened_edge_high_contrast = np.where(
-            edges_blurred_norm < 0.5, edges_blurred_norm, darkened_edge_high_contrast)
+        """
+        Darkens the high-contrast image based on the edge density map.
+        
+        The `edges_blurred_norm` variable represents a normalized edge density map, where values closer to 1 indicate stronger edges. This function selects the appropriate value to use for each pixel in the `darkened_edge_high_contrast` image:
+        
+        - If the edge density is less than 0.5, the edge density value is used.
+        - Otherwise, the original `darkened_edge_high_contrast` value is used.
+        
+        This effectively darkens the pixels in the high-contrast image where edges are detected, enhancing the visual contrast of the edges.
+        """
+        # darkened_edge_high_contrast = np.where(
+        #     edges_blurred_norm < 0.3, edges_blurred_norm, darkened_edge_high_contrast)
+        for row in range(edges_np.shape[0]):
+            for col in range(edges_np.shape[1]):
+
+                darkened_edge_high_contrast[row,
+
+                                            col] = edges_np_norm[row, col] if edges_np_norm[row, col] < 0.8 else darkened_edge_high_contrast[row, col]
         # darkened_edge_high_contrast = np.add(
         #     darkened_edge_high_contrast * 0.7, edges_np * 0.3)
 
@@ -500,12 +518,12 @@ class ImageUploadView(APIView):
         ascii_art_variants = self.generate_variants(
             darkened_edge_high_contrast)
         edge_blurred_base64 = self.encode_image(
-            (edges_np * 255).astype(np.uint8))
+            (edges_blurred_norm * 255).astype(np.uint8))
         high_contrast_base64 = self.encode_image(
             (high_contrast_norm * 255).astype(np.uint8))
         # Encode edge image and adjusted image to base64
         edge_image_b64 = self.encode_image(
-            (edge_binary * 255).astype(np.uint8))
+            (edges_np_norm * 255).astype(np.uint8))
         combined_image_b64 = self.encode_image(
             (darkened_edge_high_contrast * 255).astype(np.uint8))
         gray_img_b64 = self.encode_image(
@@ -582,7 +600,8 @@ class ImageUploadView(APIView):
         variants = []
         for gamma in gamma_values:
             # Apply gamma correction
-            corrected_img = np.power(normalized_img, gamma)
+            corrected_img = np.sign(normalized_img) * \
+                np.power(np.abs(normalized_img), gamma)
 
             # Map pixels to characters
             dot_art_lines = []
