@@ -18,123 +18,11 @@ import io
 import torch
 import kornia
 from PIL import Image
+from ansi2html import Ansi2HTMLConverter
 
 
 # class ImageUploadView(APIView):
 #     parser_classes = [MultiPartParser, FormParser, JSONParser]
-
-#     def post(self, request, format=None):
-#         # Extract data from the request
-#         image_file = request.FILES.get('file', None)
-#         image_url = request.data.get('url', None)
-#         width = request.data.get('width', 100)
-#         if width:
-#             width = int(float(width))
-#         else:
-#             width = 100  # Set default width if not provided
-
-#         if image_file:
-#             image = self.read_image_file(image_file)
-#         elif image_url:
-#             image = self.read_image_url(image_url)
-#         else:
-#             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
-
-#         # Generate ASCII art using Kornia edge detection
-#         ascii_art, edge_image_b64, combined_image_b64 = self.generate_ascii_art(
-#             image, width)
-
-#         # Return the ASCII art and images
-#         return Response({
-#             'ascii_art': ascii_art,
-#             'edge_image': edge_image_b64,
-#             'combined_image': combined_image_b64
-#         }, status=status.HTTP_200_OK)
-
-#     def canny_generate_ascii_art(self, image, width):
-#         # Resize image maintaining aspect ratio
-#         aspect_ratio = image.shape[0] / image.shape[1]
-#         height = int(width * aspect_ratio)
-#         resized_img = cv2.resize(image, (width, height))
-
-#         # Convert to RGB and Tensor
-#         img_rgb = cv2.cvtColor(resized_img, cv2.COLOR_BGR2RGB)
-#         img_tensor = self.image_to_tensor(
-#             img_rgb).unsqueeze(0)  # Add batch dimension
-
-#         # Edge detection using Kornia
-#         edge_tensor = kornia.filters.Canny()(img_tensor.float() / 255.0)[0]
-#         edges = edge_tensor[0]  # Get edge map
-
-#         # Convert edge tensor to numpy array
-#         edges_np = (edges.squeeze().numpy() * 255).astype(np.uint8)
-
-#         # Give higher weight to the original image
-#         gray_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
-#         alpha = 0.7  # Weight for the original image (adjust as needed)
-#         beta = 0.3   # Weight for the edges
-#         combined = cv2.addWeighted(gray_img, alpha, edges_np, beta, 0)
-
-#         # Normalize pixel values
-#         normalized_img = combined / 255.0
-
-#         # Map pixels to ASCII characters
-#         ascii_art = self.map_pixels_to_ascii(normalized_img)
-
-#         # Encode edge image and combined image to base64
-#         edge_image_b64 = self.encode_image(edges_np)
-#         combined_image_b64 = self.encode_image(combined)
-
-#         return ascii_art, edge_image_b64, combined_image_b64
-
-#     def canny_image_to_tensor(self, img):
-#         # Convert a numpy array to a PyTorch tensor
-#         img_tensor = torch.from_numpy(
-#             img.transpose(2, 0, 1))  # Convert HWC to CHW
-#         return img_tensor
-
-#     def encode_image(self, img):
-#         # Convert image to PIL Image and encode to base64
-#         if len(img.shape) == 2:
-#             img_pil = Image.fromarray(img)
-#         else:
-#             img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-
-#         buffered = io.BytesIO()
-#         img_pil.save(buffered, format="PNG")
-#         img_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-#         return img_b64
-
-#     def map_pixels_to_ascii(self, normalized_img):
-#         # Define a larger set of ASCII characters from dark to light
-#         chars = np.array(
-#             list('$@B%8&WM#*oahkbdpqwmZ0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^\'. '))
-#         # Invert the normalized image if needed
-#         normalized_img = 1 - normalized_img
-
-#         # Map pixel values to indices of chars
-#         indices = (normalized_img * (len(chars) - 1)).astype(int)
-
-#         # Build the ASCII art line by line
-#         ascii_art_lines = []
-#         for row in indices:
-#             line = ''.join(chars[row])
-#             ascii_art_lines.append(line)
-
-#         ascii_art = '\n'.join(ascii_art_lines)
-#         return ascii_art
-
-#     def read_image_file(self, image_file: InMemoryUploadedFile):
-#         image_data = image_file.read()
-#         image_array = np.frombuffer(image_data, np.uint8)
-#         image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-#         return image
-
-#     def read_image_url(self, url):
-#         resp = urllib.request.urlopen(url)
-#         image = np.asarray(bytearray(resp.read()), dtype="uint8")
-#         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-#         return image
 
 
 # class ImageUploadView(APIView):
@@ -271,7 +159,7 @@ from PIL import Image
 #                 dot_art_lines.append(line)
 #             dot_art = '\n'.join(dot_art_lines)
 #             variants.append({
-#                 'gamma': gamma,
+#                 "description": gamma,
 #                 'dot_art': dot_art,
 #                 'reconstructed_img': reconstructed_img
 #             })
@@ -392,7 +280,7 @@ from PIL import Image
 #             dot_art_lines.append(line)
 #         dot_art = '\n'.join(dot_art_lines)
 #         variants.append({
-#             'gamma': gamma,
+#             "description": gamma,
 #             'dot_art': dot_art
 #         })
 
@@ -422,7 +310,7 @@ class ImageUploadView(APIView):
             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Generate ASCII art using enhanced edge processing
-        ascii_art_variants, edge_image_b64, combined_image_b64, edge_blurred_base64, high_contrast_base64, gray_img_b64 = self.generate_ascii_art(
+        ascii_art_variants, edge_image_b64, combined_image_b64, high_contrast_base64, gray_img_b64, sharpened_image_b64 = self.generate_ascii_art(
             image, width)
 
         # Return the ASCII art and images
@@ -430,9 +318,9 @@ class ImageUploadView(APIView):
             'ascii_art_variants': ascii_art_variants,
             'edge_image': edge_image_b64,
             'combined_image': combined_image_b64,
-            "edge_blurred_base64": edge_blurred_base64,
             "high_contrast_base64": high_contrast_base64,
-            "gray_img_b64": gray_img_b64
+            "gray_img_b64": gray_img_b64,
+            "sharpened_image": sharpened_image_b64,
         }, status=status.HTTP_200_OK)
 
     def generate_ascii_art(self, image, width):
@@ -457,15 +345,22 @@ class ImageUploadView(APIView):
         edges_np = 1 - edges_np  # Convert to numpy array
         edges_np_norm = (edges_np - (np.min(edges_np))) / \
             ((np.max(edges_np) - np.min(edges_np)))
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
 
-        # Compute edge density map by blurring the edge map
-        edges_blurred = cv2.GaussianBlur(edges_np, (5, 5), 0)
-        edges_blurred_norm = edges_blurred / edges_blurred.max()
+        # guassian_blurred = cv2.GaussianBlur(
+        #     gray_img, (0, 0), sigmaX=0.5, sigmaY=0.5)
+        # divided_image = cv2.divide(gray_img, guassian_blurred, scale=255)
+        sharpened_image = cv2.filter2D(gray_img, -1, kernel)
+
+        # sharpened_image = sharpened_image / 255.0
+        # # Compute edge density map by blurring the edge map
+        # edges_blurred = cv2.GaussianBlur(edges_np, (5, 5), 0)
+        # edges_blurred_norm = edges_blurred / edges_blurred.max()
 
         # Use edge density to adjust the contrast of the grayscale image
         # Create a high-contrast version of the grayscale image using CLAHE
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        high_contrast = clahe.apply(gray_img)
+        high_contrast = clahe.apply(sharpened_image)
         high_contrast_norm = high_contrast / 255.0
 
         # Normalize the original grayscale image
@@ -501,24 +396,11 @@ class ImageUploadView(APIView):
                 darkened_edge_high_contrast[row,
 
                                             col] = edges_np_norm[row, col] if edges_np_norm[row, col] < 0.8 else darkened_edge_high_contrast[row, col]
-        # darkened_edge_high_contrast = np.add(
-        #     darkened_edge_high_contrast * 0.7, edges_np * 0.3)
 
-        # weighted_sum_high_contrast_and_edge = copy.deepcopy(high_contrast_norm)
-        # for y in range(high_contrast_norm.shape[0]):
-        #     for x in range(high_contrast_norm.shape[1]):
-        #         weighted_sum_high_contrast_and_edge[y, x] = weighted_sum_high_contrast_and_edge[y, x]
-        #         index = int(pixel_value * (len(chars) - 1))
-        #         index = len(chars) - index - 1
-        #         line += chars[index]
-        # weighted_sum_high_contrast_and_edge
-
-        # Map pixels to ASCII characters
-        # ascii_art_variants = self.generate_variants(adjusted_img, gray_img)
         ascii_art_variants = self.generate_variants(
-            darkened_edge_high_contrast)
-        edge_blurred_base64 = self.encode_image(
-            (edges_blurred_norm * 255).astype(np.uint8))
+            darkened_edge_high_contrast, resized_img)
+        # edge_blurred_base64 = self.encode_image(
+        #     (edges_blurred_norm * 255).astype(np.uint8))
         high_contrast_base64 = self.encode_image(
             (high_contrast_norm * 255).astype(np.uint8))
         # Encode edge image and adjusted image to base64
@@ -528,17 +410,25 @@ class ImageUploadView(APIView):
             (darkened_edge_high_contrast * 255).astype(np.uint8))
         gray_img_b64 = self.encode_image(
             (gray_img).astype(np.uint8))
+        sharpened_image_b64 = self.encode_image(
+            (sharpened_image).astype(np.uint8))
 
         ascii_art_variants.append({
-            'gamma': "Gray Image",
+            "description": "Original Gray Image",
             'dot_art': self.map_pixels_to_ascii(gray_norm)
         })
         ascii_art_variants.append({
-            'gamma': "High Contrast Image",
+            "description": "High Contrast Image",
             'dot_art': self.map_pixels_to_ascii(high_contrast_norm)
         })
 
-        return ascii_art_variants, edge_image_b64, combined_image_b64, edge_blurred_base64, high_contrast_base64, gray_img_b64
+        our_pick = self.select_best_variant(resized_img, ascii_art_variants)
+        ascii_art_variants.append({
+            "description": "Our Pick",
+            'dot_art': our_pick["dot_art"]
+        })
+
+        return ascii_art_variants, edge_image_b64, combined_image_b64, high_contrast_base64, gray_img_b64, sharpened_image_b64
 
     def image_to_tensor(self, img):
         # Convert a numpy array to a PyTorch tensor
@@ -570,11 +460,17 @@ class ImageUploadView(APIView):
             for x in range(normalized_img.shape[1]):
                 pixel_value = normalized_img[y, x]
                 index = int(pixel_value * (len(chars) - 1))
-                # Invert index to match characters from dark to light
+                # Invert index to match characters from dark to ligh
+
                 index = len(chars) - index - 1
                 line += chars[index]
+                # line += f"\033[38;5;{color_code}m{chars[index]}\033[0m"
+ # Map to 256-color codes
+
             dot_art_lines.append(line)
         dot_art = '\n'.join(dot_art_lines)
+        # dot_art = conv.convert(dot_art, full=False)
+
         return dot_art
 
     def read_image_file(self, image_file: InMemoryUploadedFile):
@@ -589,14 +485,14 @@ class ImageUploadView(APIView):
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
         return image
 
-    def generate_variants(self, normalized_img):
+    def generate_variants(self, normalized_img, resized_img):
         # Normalize pixel values to range 0-1
         # Generate multiple variants with different gamma values
         # You can adjust these values
         gamma_values = [0.5, 0.8, 1.0, 1.2, 1.5, 2.0]
         chars = ['@', '%', '#', '*', '+', '=', '-',
                  ':', '.', ' ']
-
+        reconstructed_images = []
         variants = []
         for gamma in gamma_values:
             # Apply gamma correction
@@ -605,37 +501,81 @@ class ImageUploadView(APIView):
 
             # Map pixels to characters
             dot_art_lines = []
+            reconstructed_img = np.zeros_like(corrected_img)
             for y in range(corrected_img.shape[0]):
                 line = ''
                 for x in range(corrected_img.shape[1]):
                     pixel_value = corrected_img[y, x]
                     index = int(pixel_value * (len(chars) - 1))
                     # Invert index to match characters from dark to light
+
                     index = len(chars) - index - 1
+
                     line += chars[index]
+                    # line += f"\033[38;5;{color_code}m{chars[index]}\033[0m"
+                    # Reconstruct the image from ASCII art
+                    reconstructed_img[y, x] = (
+                        len(chars) - index - 1) / (len(chars) - 1)
+                # dot_art_lines.append(line)
                 dot_art_lines.append(line)
             dot_art = '\n'.join(dot_art_lines)
+
             variants.append({
-                'gamma': gamma,
-                'dot_art': dot_art
+                "description": gamma,
+                'dot_art': dot_art,
+                "reconstructed_img": reconstructed_img
             })
         return variants
 
-    # def map_pixels_to_ascii(self, normalized_img):
-    #     # Define a larger set of ASCII characters from dark to light
-    #     chars = np.array(
-    #         list('$@B%8&WM#*oahkbdpqwmZ0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^\'. '))
-    #     # Invert the normalized image if needed
-    #     normalized_img = 1 - normalized_img
+    def select_best_variant(self, original_img, variants):
+        # Convert images to tensors
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize((224, 224)),  # Resize to match VGG input size
+        ])
 
-    #     # Map pixel values to indices of chars
-    #     indices = (normalized_img * (len(chars) - 1)).astype(int)
+        # Ensure original_img is in the correct format and type
+        original_img_rgb = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
+        original_img_rgb = original_img_rgb.astype(
+            np.float32) / 255.0  # Normalize to [0,1]
+        original_tensor = transform(original_img_rgb).unsqueeze(
+            0)  # Add batch dimension
 
-    #     # Build the ASCII art line by line
-    #     ascii_art_lines = []
-    #     for row in indices:
-    #         line = ''.join(chars[row])
-    #         ascii_art_lines.append(line)
+        # Load pre-trained VGG19 model
+        vgg = models.vgg19(pretrained=True).features.eval()
 
-    #     ascii_art = '\n'.join(ascii_art_lines)
-    #     return ascii_art
+        # Use GPU if available
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        vgg.to(device)
+        original_tensor = original_tensor.to(device)
+
+        # Define loss function
+        criterion = nn.MSELoss()
+
+        min_loss = float('inf')
+        best_variant = None
+
+        for variant in variants:
+            if "reconstructed_img" not in variant:
+                continue
+            reconstructed_img = variant['reconstructed_img']
+            # Convert reconstructed image to tensor
+            reconstructed_img_rgb = np.stack((reconstructed_img,)*3, axis=-1)
+            reconstructed_img_rgb = reconstructed_img_rgb.astype(
+                np.float32)  # Ensure type is float32
+            reconstructed_tensor = transform(
+                reconstructed_img_rgb).unsqueeze(0).to(device)
+
+            # Get feature maps
+            with torch.no_grad():
+                original_features = vgg(original_tensor)
+                reconstructed_features = vgg(reconstructed_tensor)
+
+            # Calculate perceptual loss
+            loss = criterion(original_features, reconstructed_features).item()
+
+            if loss < min_loss:
+                min_loss = loss
+                best_variant = variant
+
+        return best_variant
