@@ -136,6 +136,6 @@ CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
 ]
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # React frontend
+    'http://localhost:3000', 'https://*.vercel.app'  # React frontend
     # Add other trusted origins
 ]
