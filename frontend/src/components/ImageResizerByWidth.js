@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Resizable, ResizableBox } from "react-resizable";
 import "react-resizable/css/styles.css";
 
@@ -9,8 +9,14 @@ function ImageResizerByWidth({
   onAspectRatioChange,
   transformScale,
   resizedImageDimensions,
+  initialSliderValue = 100,
 }) {
-  const [sliderWidth, setSliderWidth] = useState(100);
+  const [sliderWidth, setSliderWidth] = useState(initialSliderValue);
+
+  // Update slider when initialSliderValue changes (new image loaded)
+  useEffect(() => {
+    setSliderWidth(initialSliderValue);
+  }, [initialSliderValue]);
 
   const handleWidthSliderChange = (e) => {
     setSliderWidth(e.target.value);
