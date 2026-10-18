@@ -1,7 +1,22 @@
+# Dependencies
 **/node_modules
+.pnpm-store
+
+# Build output
 **/dist
 **/build
-*.log
-*.pyc
-.vercel
+
+# Python
 .venv
+__pycache__/
+*.pyc
+
+# Environment (keep the *.env.example templates)
+.env
+.env.*
+!.env.example
+
+# Tooling / OS
+.vercel
+.DS_Store
+*.log

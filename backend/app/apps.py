@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class AppConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
+class DotArtConfig(AppConfig):
     name = "app"
+    verbose_name = "Dot Art Generator"
